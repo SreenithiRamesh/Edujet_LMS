@@ -4,7 +4,7 @@
 It provides a modern interface for students and educators to interact, manage courses, and track learning progress.
 
 KEY FEATURES
-- 🔐 **User Authentication**: Secure login and registration using JWT
+- 🔐 **User Authentication**: Secure login and registration using Clerk.dev
 - 🧑‍🏫 **Educator Dashboard**: Manage courses, view enrolled students, and update content
 - 👩‍🎓 **Student Dashboard**: Browse courses, enroll, track progress
 - 📚 **Course Management**: Create, edit, and organize course modules

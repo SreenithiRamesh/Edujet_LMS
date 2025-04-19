@@ -18,4 +18,5 @@ await connectDB();
 app.get('/', (req, res) => res.send("API Working ✅"));
 app.post('/clerk', clerkWebhooks);
 
-export const handler = serverless(app);
+// ✅ THIS is what Vercel needs
+export default serverless(app);

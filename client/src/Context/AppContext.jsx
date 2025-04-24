@@ -1,7 +1,8 @@
 import { createContext, useEffect, useState } from "react";
 import { dummyCourses } from "../assets/assets";
-import { useNavigate } from "react-router-dom";
+import { Form, useNavigate } from "react-router-dom";
 import humanizeDuration from "humanize-duration";
+import {useAuth,useUser} from "@clerk/clerk-react";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AppContext = createContext();
@@ -9,6 +10,9 @@ export const AppContext = createContext();
 export const AppContextProvider = (props) => {
   const currency = import.meta.env.VITE_CURRENCY;
   const navigate = useNavigate();
+
+  const{getToken}=useAuth()
+  const {user}=useUser()
 
   const [AllCourses, SetAllCourses] = useState([]);
   const [isEducator, SetisEducator] = useState(true);
@@ -67,6 +71,18 @@ export const AppContextProvider = (props) => {
     fetchAllCourses();
     fetchUserenrolledCourses();
   }, []);
+
+  const logToken=async ()=>{
+    console.log(await getToken());
+  }
+
+useEffect(()=>{
+  if(user){ 
+    logToken()
+   }
+
+},[user])
+
 
   const value = {
     currency,

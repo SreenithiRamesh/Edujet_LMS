@@ -67,7 +67,7 @@ export const stripeWebhooks = async (request, response) => {
   } catch (err) {
     console.error(`Webhook verification error: ${err.message}`);
     response.status(400).send(`Webhook Error: ${err.message}`);
-    return;
+    return; // Ensure the function exits here
   }
 
   // Handle the event
@@ -110,7 +110,7 @@ export const stripeWebhooks = async (request, response) => {
         userData.enrolledCourses.push(courseData._id);
         await userData.save();
 
-        purchaseData.status = "completed"; // Match the enum value
+        purchaseData.status = "completed";
         await purchaseData.save();
         console.log(`Updated status to completed for ${purchaseId}`);
       } catch (error) {

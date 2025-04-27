@@ -15,10 +15,10 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
 app.use(clerkMiddleware());
 
-// Routes
+// Routes with global express.json() for parsed JSON (except /stripe)
+app.use(express.json());
 app.get("/", (req, res) => {
   res.send("API Working :)");
 });

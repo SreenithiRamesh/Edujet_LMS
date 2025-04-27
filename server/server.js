@@ -17,19 +17,22 @@ const app = express();
 app.use(cors());
 app.use(clerkMiddleware());
 
-// Routes with global express.json() for parsed JSON (except /stripe)
-app.use(express.json());
+// Routes
 app.get("/", (req, res) => {
   res.send("API Working :)");
 });
 
-app.post("/clerk", express.json(), clerkWebhooks);
-app.use("/api/educator", express.json(), educatorRouter);
-app.use("/api/course", express.json(), courseRouter);
-app.use("/api/user", express.json(), userRouter);
-
-// Webhook route with raw body
+// Important: Stripe webhook route MUST be before the global JSON parser
 app.post("/stripe", express.raw({ type: "application/json" }), stripeWebhooks);
+
+// Global JSON parser for all other routes
+app.use(express.json());
+
+// Other routes
+app.post("/clerk", clerkWebhooks);
+app.use("/api/educator", educatorRouter);
+app.use("/api/course", courseRouter);
+app.use("/api/user", userRouter);
 
 // Start server
 const startServer = async () => {

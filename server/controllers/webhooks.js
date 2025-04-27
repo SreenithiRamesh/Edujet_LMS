@@ -55,61 +55,61 @@ export const clerkWebhooks = async (req, res) => {
 };
 
 // Stripe Webhooks
+import { buffer } from "micro"; // ⚡️ Required for webhook
+
 export const stripeWebhooks = async (req, res) => {
+  const buf = await buffer(req);
   const sig = req.headers["stripe-signature"];
 
   let event;
 
   try {
-    event = Stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET_KEY);
+    event = stripeInstance.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET_KEY);
   } catch (err) {
-    console.error(err.message);
+    console.error("Webhook signature verification failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   switch (event.type) {
-    case "payment_intent.succeeded": {
-      const paymentIntent = event.data.object;
-      const paymentIntentId = paymentIntent.id;
+    case "checkout.session.completed": {
+      const session = event.data.object;
+      const purchaseId = session.metadata.purchaseId;
 
-      const sessions = await stripeInstance.checkout.sessions.list({
-        payment_intent: paymentIntentId,
-      });
-
-      const { purchaseId } = sessions.data[0].metadata;
       const purchaseData = await Purchase.findById(purchaseId);
-      const userData = await User.findById(purchaseData.userId);
-      const courseData = await Course.findById(purchaseData.courseId.toString());
-
-      // Add user to course
-      courseData.enrolledStudents.push(userData._id);
-      await courseData.save();
-
-      // Add course to user
-      userData.enrolledCourses.push(courseData._id);
-      await userData.save();
+      if (!purchaseData) {
+        console.error("Purchase not found");
+        break;
+      }
 
       // Update purchase status
       purchaseData.status = "completed";
       await purchaseData.save();
 
+      const userData = await User.findById(purchaseData.userId);
+      const courseData = await Course.findById(purchaseData.courseId.toString());
+
+      if (userData && courseData) {
+        // Add user to course
+        courseData.enrolledStudents.push(userData._id);
+        await courseData.save();
+
+        // Add course to user
+        userData.enrolledCourses.push(courseData._id);
+        await userData.save();
+      }
       break;
     }
 
+    case "checkout.session.expired":
     case "payment_intent.payment_failed": {
-      const paymentIntent = event.data.object;
-      const paymentIntentId = paymentIntent.id;
+      const session = event.data.object;
+      const purchaseId = session.metadata.purchaseId;
 
-      const sessions = await stripeInstance.checkout.sessions.list({
-        payment_intent: paymentIntentId,
-      });
-
-      const { purchaseId } = sessions.data[0].metadata;
       const purchaseData = await Purchase.findById(purchaseId);
-
-      purchaseData.status = "failed";
-      await purchaseData.save();
-
+      if (purchaseData) {
+        purchaseData.status = "failed";
+        await purchaseData.save();
+      }
       break;
     }
 

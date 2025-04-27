@@ -1,10 +1,12 @@
 import User from "../models/User.js";
+import Course from "../models/Course.js";
 import { Purchase } from "../models/Purchase.js";
 import Stripe from "stripe";
-import Course from "../models/Course.js";
+
+const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 /* ------------------------------------------------------------------ */
-/* 1. Get logged‑in user data                                         */
+/* 1. Get Logged‑in User Data                                         */
 /* ------------------------------------------------------------------ */
 export const getUserData = async (req, res) => {
   try {
@@ -23,7 +25,7 @@ export const getUserData = async (req, res) => {
 };
 
 /* ------------------------------------------------------------------ */
-/* 2. Fetch user’s enrolled courses (lecture links populated)         */
+/* 2. Fetch User’s Enrolled Courses                                   */
 /* ------------------------------------------------------------------ */
 export const userEnrolledCourses = async (req, res) => {
   try {
@@ -36,12 +38,12 @@ export const userEnrolledCourses = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    return res.json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 /* ------------------------------------------------------------------ */
-/* 3. Purchase a course (Stripe checkout session)                     */
+/* 3. Purchase a Course (Create Stripe Checkout Session)             */
 /* ------------------------------------------------------------------ */
 export const purchaseCourse = async (req, res) => {
   try {
@@ -49,19 +51,15 @@ export const purchaseCourse = async (req, res) => {
     const { origin } = req.headers;
     const userId = req.auth.userId;
 
-    /* --- fetch data ------------------------------------------------ */
     const userData = await User.findById(userId);
     const courseData = await Course.findById(courseId);
 
-    /* --- guard clause --------------------------------------------- */
     if (!userData || !courseData) {
       return res.json({ success: false, message: "Data Not Found" });
-    } // <-- the brace that was missing
+    }
 
-    /* --- create Purchase document --------------------------------- */
     const amount = (
-      courseData.coursePrice -
-      (courseData.discount * courseData.coursePrice) / 100
+      courseData.coursePrice - (courseData.discount * courseData.coursePrice) / 100
     ).toFixed(2);
 
     const newPurchase = await Purchase.create({
@@ -70,8 +68,6 @@ export const purchaseCourse = async (req, res) => {
       amount,
     });
 
-    /* --- initialise Stripe checkout ------------------------------ */
-    const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
     const currency = process.env.CURRENCY.toLowerCase();
 
     const line_items = [
@@ -79,7 +75,7 @@ export const purchaseCourse = async (req, res) => {
         price_data: {
           currency,
           product_data: { name: courseData.courseTitle },
-          unit_amount: Math.floor(newPurchase.amount) * 100, // cents
+          unit_amount: Math.floor(newPurchase.amount * 100), // amount in cents
         },
         quantity: 1,
       },

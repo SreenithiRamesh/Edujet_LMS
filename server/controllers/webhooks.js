@@ -58,28 +58,53 @@ export const clerkWebhooks = async (req, res) => {
 const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const stripeWebhooks = async (request, response) => {
+  // Debug raw body
+  console.log("Request body type:", typeof request.body);
+  console.log("Request body length:", request.body ? request.body.length : 'undefined');
+
+  // Check if body exists
+  if (!request.body || (typeof request.body === 'object' && Object.keys(request.body).length === 0)) {
+    console.error("Empty request body");
+    return response.status(400).send("Webhook Error: No request body");
+  }
+
   const sig = request.headers["stripe-signature"];
-  console.log("Received Stripe webhook request with signature:", sig);
+  
+  if (!sig) {
+    console.error("No Stripe signature found in headers");
+    return response.status(400).send("Webhook Error: No Stripe signature");
+  }
+  
+  console.log("Received Stripe webhook with signature:", sig);
 
   let event;
 
   try {
-    console.log("Attempting to construct event...");
+    // Make sure request.body is a buffer or string
+    const rawBody = typeof request.body === 'string' ? request.body : 
+                  Buffer.isBuffer(request.body) ? request.body : 
+                  JSON.stringify(request.body);
+                  
     event = stripeInstance.webhooks.constructEvent(
-      request.body,
+      rawBody,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET_KEY
     );
+    
     console.log("Event constructed successfully:", event.type);
   } catch (err) {
     console.error("Webhook verification failed:", err.message);
     return response.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle the event
-  console.log("Processing event:", event.type);
-  
+  // Safety check for event
+  if (!event || !event.type) {
+    console.error("Invalid event object:", event);
+    return response.status(400).send("Webhook Error: Invalid event object");
+  }
+
   try {
+    // Handle the event based on type
     switch (event.type) {
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object;

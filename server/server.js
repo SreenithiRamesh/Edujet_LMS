@@ -13,19 +13,30 @@ import Stripe from "stripe";
 const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 const app = express();
 
-// Middleware
+// Basic middleware
 app.use(cors());
 app.use(clerkMiddleware());
 
-// Routes
+// Root route
 app.get("/", (req, res) => {
   res.send("API Working :)");
 });
 
-// Important: Stripe webhook route MUST be before the global JSON parser
-app.post("/stripe", express.raw({ type: "application/json" }), stripeWebhooks);
+// IMPORTANT: Handle Stripe webhooks BEFORE any JSON middleware
+// This ensures the raw body is available for signature verification
+app.post("/stripe", 
+  express.raw({ type: 'application/json' }), 
+  (req, res, next) => {
+    // Debug middleware to check what's coming in
+    console.log("Stripe webhook received:");
+    console.log("- Body type:", typeof req.body);
+    console.log("- Has signature:", !!req.headers["stripe-signature"]);
+    next();
+  },
+  stripeWebhooks
+);
 
-// Global JSON parser for all other routes
+// Apply JSON parsing for all other routes AFTER the Stripe webhook route
 app.use(express.json());
 
 // Other routes

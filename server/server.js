@@ -8,9 +8,7 @@ import "./configs/cloudinary.js";
 import educatorRouter from "./routes/educatorRoutes.js";
 import courseRouter from "./routes/courseRoute.js";
 import userRouter from "./routes/userRoutes.js";
-import Stripe from "stripe";
 
-const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 const app = express();
 
 // Basic middleware
@@ -22,28 +20,34 @@ app.get("/", (req, res) => {
   res.send("API Working :)");
 });
 
-// IMPORTANT: Handle Stripe webhooks BEFORE any JSON middleware
-// This ensures the raw body is available for signature verification
+// Stripe webhook route (must come before express.json())
 app.post("/stripe", 
-  express.raw({ type: 'application/json' }), 
+  express.raw({ type: "application/json" }),
   (req, res, next) => {
-    // Debug middleware to check what's coming in
-    console.log("Stripe webhook received:");
-    console.log("- Body type:", typeof req.body);
-    console.log("- Has signature:", !!req.headers["stripe-signature"]);
+    req.rawBody = req.body.toString();
     next();
   },
   stripeWebhooks
 );
 
-// Apply JSON parsing for all other routes AFTER the Stripe webhook route
-app.use(express.json());
+// Apply JSON parsing for all other routes
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
 // Other routes
 app.post("/clerk", clerkWebhooks);
 app.use("/api/educator", educatorRouter);
 app.use("/api/course", courseRouter);
 app.use("/api/user", userRouter);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Global error handler:", err);
+  res.status(500).json({ 
+    success: false, 
+    message: err.message || "Internal Server Error" 
+  });
+});
 
 // Start server
 const startServer = async () => {
@@ -54,6 +58,7 @@ const startServer = async () => {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`Stripe webhook endpoint: http://localhost:${PORT}/stripe`);
     });
   } catch (error) {
     console.error("Failed to connect to MongoDB:", error);

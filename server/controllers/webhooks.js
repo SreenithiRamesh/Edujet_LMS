@@ -59,18 +59,27 @@ const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const stripeWebhooks = async (request, response) => {
   const sig = request.headers["stripe-signature"];
+  console.log("Received Stripe webhook request with signature:", sig);
 
   let event;
 
   try {
-    event = stripeInstance.webhooks.constructEvent(request.body, sig, process.env.STRIPE_WEBHOOK_SECRET_KEY);
+    console.log("Attempting to construct event...");
+    event = stripeInstance.webhooks.constructEvent(
+      request.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET_KEY
+    );
+    console.log("Event constructed successfully:", event.type);
   } catch (err) {
-    console.error(`Webhook verification error: ${err.message}`);
+    console.error("Webhook verification failed:", err.message);
     response.status(400).send(`Webhook Error: ${err.message}`);
-    return; // Ensure the function exits here
+    console.log("Exiting function due to verification failure");
+    return; // Ensure the function exits
   }
 
   // Handle the event
+  console.log("Processing event:", event.type);
   switch (event.type) {
     case "payment_intent.succeeded": {
       const paymentIntent = event.data.object;

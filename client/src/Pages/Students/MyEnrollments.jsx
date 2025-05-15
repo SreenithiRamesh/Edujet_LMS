@@ -1,93 +1,285 @@
-import React, { useContext, useState } from "react";
-import { AppContext } from "../../context/AppContext";
-import {Line} from 'rc-progress'
+import React, { useContext, useEffect, useState } from "react";
+import { AppContext } from "../../Context/AppContext";
+import { Line } from "rc-progress";
 import Footer from "../../Components/Students/Footer/Footer";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import Loading from "../../Components/Students/Loading/Loading";
+
 const MyEnrollments = () => {
-  const { enrolledCourses, calCourseDuration ,navigate} = useContext(AppContext);
-  const [progressArray] = useState([
-    { lectureCompleted: 2, totalLectures: 4 },
-    { lectureCompleted: 1, totalLectures: 5 },
-    { lectureCompleted: 3, totalLectures: 6 },
-    { lectureCompleted: 4, totalLectures: 4 },
-    { lectureCompleted: 0, totalLectures: 3 },
-    { lectureCompleted: 5, totalLectures: 7 },
-    { lectureCompleted: 6, totalLectures: 8 },
-    { lectureCompleted: 2, totalLectures: 6 },
-    { lectureCompleted: 4, totalLectures: 10 },
-    { lectureCompleted: 3, totalLectures: 5 },
-    { lectureCompleted: 7, totalLectures: 7 },
-    { lectureCompleted: 1, totalLectures: 4 },
-    { lectureCompleted: 0, totalLectures: 2 },
-    { lectureCompleted: 5, totalLectures: 5 }
-  ]);
+  const { enrolledCourses, calCourseDuration, backendUrl, getToken } =
+    useContext(AppContext);
+  const navigate = useNavigate();
+  const [progressData, setProgressData] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchProgress = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      const progressMap = {};
+
+      await Promise.all(
+        enrolledCourses.map(async (course) => {
+          try {
+            const { data } = await axios.post(
+              `${backendUrl}/api/user/get-course-progress`,
+              { courseId: course._id },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (data.success) {
+              progressMap[course._id] = data.progressData;
+            }
+          } catch (err) {
+            console.error(
+              `Error fetching progress for course ${course._id}:`,
+              err
+            );
+            progressMap[course._id] = { lectureCompleted: [] };
+          }
+        })
+      );
+
+      setProgressData(progressMap);
+    } catch (error) {
+      console.error("Progress fetch failed:", error);
+      setError("Failed to load course progress. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (enrolledCourses.length > 0) {
+      fetchProgress();
+    } else {
+      setIsLoading(false);
+    }
+  }, [enrolledCourses]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loading />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="text-red-500 text-lg mb-4">{error}</div>
+        <button
+          onClick={fetchProgress}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (enrolledCourses.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="text-gray-600 text-lg mb-4">
+          You haven't enrolled in any courses yet.
+        </div>
+        <button
+          onClick={() => navigate("/courses")}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Browse Courses
+        </button>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <>
-    <div className="md:px-36 px-6 pt-10 bg-white min-h-screen mb-10">
-      <h1 className="text-3xl font-bold text-blue-800 mb-6">My Enrollments</h1>
+      <div className="lg:px-36 md:px-8 px-4 pt-8 bg-white min-h-screen pb-10">
+        <h1 className="text-2xl md:text-3xl font-bold text-blue-800 mb-6">
+          My Enrollments
+        </h1>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left border border-blue-200 bg-blue-50 rounded-lg overflow-hidden">
-          <thead className="bg-blue-100 text-blue-900 text-sm font-semibold">
-            <tr>
-              <th className="px-4 py-3">Course</th>
-              <th className="px-4 py-3">Duration</th>
-              <th className="px-4 py-3">Completed</th>
-              <th className="px-4 py-3">Status</th>
-            </tr>
-          </thead>
+        <div className="hidden md:block overflow-x-auto shadow-md rounded-lg mb-8">
+          <table className="min-w-full text-left border border-[#BBDEFB] bg-white">
+            <thead className="bg-[#E3F2FD] text-[#1565C0]">
+              <tr>
+                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">
+                  Course
+                </th>
+                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">
+                  Duration
+                </th>
+                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">
+                  Progress
+                </th>
+                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-blue-50">
+              {enrolledCourses.map((course) => {
+                const totalLectures =
+                  course.courseContent?.reduce(
+                    (total, chap) => total + (chap.chapterContent?.length || 0),
+                    0
+                  ) || 0;
+                const completed =
+                  progressData[course._id]?.lectureCompleted?.length || 0;
+                const progressPercent =
+                  totalLectures > 0
+                    ? Math.round((completed * 100) / totalLectures)
+                    : 0;
 
-          <tbody className="text-blue-900 text-sm divide-y divide-blue-200">
-            {enrolledCourses.map((course, index) => (
-              <tr key={index} className="hover:bg-blue-100 transition-all">
-                <td className="px-4 py-4 md:pl-4 pl-2 flex gap-3 items-center flex-wrap md:flex-nowrap">
+                return (
+                  <tr
+                    key={course._id}
+                    className="hover:bg-[#F1F8FF] transition-colors cursor-pointer"
+                    onClick={() => navigate(`/course-video/${course._id}`)}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <img
+                          src={course.courseThumbnail}
+                          alt={course.courseTitle}
+                          className="w-12 h-12 object-cover rounded-md shadow mr-4"
+                          onError={(e) => {
+                            e.target.src = "/default-course-thumbnail.jpg";
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-blue-900 font-medium truncate">
+                            {course.courseTitle}
+                          </p>
+                          <Line
+                            strokeWidth={3}
+                            percent={progressPercent}
+                            strokeColor="#3B82F6"
+                            trailColor="#EFF6FF"
+                            className="mt-2"
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-blue-800">
+                      {calCourseDuration(course)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-blue-700 font-medium">
+                        {completed}
+                      </span>
+                      <span className="text-blue-400"> / {totalLectures}</span>
+                      <span className="block text-xs text-blue-500 mt-1">
+                        {progressPercent}% complete
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        className={`${
+                          progressPercent === 100
+                            ? "bg-green-100 text-green-800"
+                            : "bg-blue-100 text-blue-800"
+                        } px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/course-video/${course._id}`);
+                        }}
+                      >
+                        {progressPercent === 100 ? "Completed" : "Continue"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="md:hidden space-y-4">
+          {enrolledCourses.map((course) => {
+            const totalLectures =
+              course.courseContent?.reduce(
+                (total, chap) => total + (chap.chapterContent?.length || 0),
+                0
+              ) || 0;
+            const completed =
+              progressData[course._id]?.lectureCompleted?.length || 0;
+            const progressPercent =
+              totalLectures > 0
+                ? Math.round((completed * 100) / totalLectures)
+                : 0;
+
+            return (
+              <div
+                key={course._id}
+                className="bg-white p-4 rounded-lg shadow border border-gray-100 cursor-pointer"
+                onClick={() => navigate(`/course-video/${course._id}`)}
+              >
+                <div className="flex items-start">
                   <img
                     src={course.courseThumbnail}
-                    alt="Course Thumbnail"
-                    className="w-16 h-16 object-cover rounded-md shadow"
+                    alt={course.courseTitle}
+                    className="w-16 h-16 object-cover rounded-md shadow mr-4"
+                    onError={(e) => {
+                      e.target.src = "/default-course-thumbnail.jpg";
+                    }}
                   />
-                  <div className="flex-1">
-
-                
-                  <p className="mb-1 max-sm:text-sm">{course.courseTitle}</p>
-                  <Line strokeWidth={2} percent={progressArray[index]?(progressArray[index]
-                    .lectureCompleted*100)/ progressArray[index].totalLectures : 0 } className="bg-gray-300 rounded-full"/>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-blue-900 font-medium truncate">
+                      {course.courseTitle}
+                    </h3>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-sm text-blue-700">
+                        {calCourseDuration(course)}
+                      </span>
+                      <span className="text-sm">
+                        <span className="text-blue-600 font-medium">
+                          {completed}
+                        </span>
+                        <span className="text-blue-300">/{totalLectures}</span>
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <Line
+                        strokeWidth={3}
+                        percent={progressPercent}
+                        strokeColor="#3B82F6"
+                        trailColor="#EFF6FF"
+                      />
+                      <div className="flex justify-between text-xs mt-1">
+                        <span className="text-blue-500">
+                          {progressPercent}% complete
+                        </span>
+                        <button
+                          className={`${
+                            progressPercent === 100
+                              ? "text-green-600"
+                              : "text-blue-600"
+                          } font-medium`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/course-video/${course._id}`);
+                          }}
+                        >
+                          {progressPercent === 100 ? "Review" : "Continue"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </td>
-                <td className="px-4 py-4">{calCourseDuration(course)}</td>
-                <td className="px-4 py-3 ">
-                  {progressArray[index] &&
-                    `${progressArray[index].lectureCompleted} / ${progressArray[index].totalLectures} Lectures`}
-                </td>
-
-                <td className="px-4 py-4">
-                <button
-  className={`${
-    progressArray[index] &&
-    progressArray[index].lectureCompleted /
-      progressArray[index].totalLectures === 1
-      ? "bg-green-200 text-green-800"
-      : "lg:bg-blue-200 text-blue-800"
-  } px-3 py-2 rounded text-xs font-semibold`}
-  onClick={() => navigate("/course-video/" + course._id)}
->
-  {progressArray[index] &&
-  progressArray[index].lectureCompleted /
-    progressArray[index].totalLectures === 1
-    ? "Completed"
-    : "On Going"}
-</button>
-
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
- 
-    </div>
-         <Footer/>
-        </>
+      <Footer />
+    </>
   );
 };
 

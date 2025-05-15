@@ -76,15 +76,14 @@ export const stripeWebhooks = async (req, res) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        
-        // Verify session is complete
+
         if (session.payment_status !== "paid") {
           console.log("Session not paid:", session.id);
           break;
         }
 
         const { purchaseId, userId, courseId } = session.metadata;
-        
+
         if (!purchaseId || !userId || !courseId) {
           throw new Error("Missing metadata in session");
         }
@@ -93,17 +92,17 @@ export const stripeWebhooks = async (req, res) => {
         await Purchase.findByIdAndUpdate(purchaseId, {
           status: "completed",
           paymentId: session.payment_intent,
-          completedAt: new Date()
+          completedAt: new Date(),
         });
 
         // Update user enrollments
         await User.findByIdAndUpdate(userId, {
-          $addToSet: { enrolledCourses: courseId }
+          $addToSet: { enrolledCourses: courseId },
         });
 
         // Update course enrollments
         await Course.findByIdAndUpdate(courseId, {
-          $addToSet: { enrolledStudents: userId }
+          $addToSet: { enrolledStudents: userId },
         });
 
         console.log(`Successfully processed purchase ${purchaseId}`);
@@ -111,33 +110,32 @@ export const stripeWebhooks = async (req, res) => {
       }
 
       case "payment_intent.succeeded": {
-        // Backup handler in case checkout.session.completed fails
         const paymentIntent = event.data.object;
-        
+
         if (paymentIntent.status === "succeeded") {
           const sessions = await stripeInstance.checkout.sessions.list({
             payment_intent: paymentIntent.id,
-            limit: 1
+            limit: 1,
           });
 
           if (sessions.data.length > 0) {
             const session = sessions.data[0];
             const { purchaseId, userId, courseId } = session.metadata;
-            
+
             if (purchaseId) {
               await Purchase.findByIdAndUpdate(purchaseId, {
                 status: "completed",
                 paymentId: paymentIntent.id,
-                completedAt: new Date()
+                completedAt: new Date(),
               });
 
               if (userId && courseId) {
                 await User.findByIdAndUpdate(userId, {
-                  $addToSet: { enrolledCourses: courseId }
+                  $addToSet: { enrolledCourses: courseId },
                 });
 
                 await Course.findByIdAndUpdate(courseId, {
-                  $addToSet: { enrolledStudents: userId }
+                  $addToSet: { enrolledStudents: userId },
                 });
               }
             }
@@ -150,7 +148,7 @@ export const stripeWebhooks = async (req, res) => {
         const paymentIntent = event.data.object;
         const sessions = await stripeInstance.checkout.sessions.list({
           payment_intent: paymentIntent.id,
-          limit: 1
+          limit: 1,
         });
 
         if (sessions.data.length > 0) {
@@ -158,9 +156,46 @@ export const stripeWebhooks = async (req, res) => {
           if (purchaseId) {
             await Purchase.findByIdAndUpdate(purchaseId, {
               status: "failed",
-              failedAt: new Date()
+              failedAt: new Date(),
             });
           }
+        }
+        break;
+      }
+
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object;
+        const { purchaseId, userId, courseId } = session.metadata;
+
+        if (purchaseId) {
+          await Purchase.findByIdAndUpdate(purchaseId, {
+            status: "completed",
+            paymentId: session.payment_intent,
+            completedAt: new Date(),
+          });
+
+          if (userId && courseId) {
+            await User.findByIdAndUpdate(userId, {
+              $addToSet: { enrolledCourses: courseId },
+            });
+
+            await Course.findByIdAndUpdate(courseId, {
+              $addToSet: { enrolledStudents: userId },
+            });
+          }
+        }
+        break;
+      }
+
+      case "checkout.session.async_payment_failed": {
+        const session = event.data.object;
+        const { purchaseId } = session.metadata;
+
+        if (purchaseId) {
+          await Purchase.findByIdAndUpdate(purchaseId, {
+            status: "failed",
+            failedAt: new Date(),
+          });
         }
         break;
       }
@@ -172,6 +207,9 @@ export const stripeWebhooks = async (req, res) => {
     res.json({ received: true });
   } catch (error) {
     console.error("Webhook processing error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: error.message,
+      details: error.stack,
+    });
   }
 };

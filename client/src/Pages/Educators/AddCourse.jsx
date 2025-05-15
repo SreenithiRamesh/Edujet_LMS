@@ -1,9 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import uniqid from "uniqid";
 import Quill from "quill";
 import { assets } from "../../assets/assets";
+import { AppContext } from "../../Context/AppContext";
 
 const AddCourse = () => {
+  const { backendUrl, getToken } = useContext(AppContext);
   const quillRef = useRef(null);
   const editorRef = useRef(null);
 
@@ -69,9 +71,54 @@ const AddCourse = () => {
     }
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const description = quillRef.current.root.innerHTML;
+
+    const formData = new FormData();
+    formData.append("title", courseTitle);
+    formData.append("description", description);
+    formData.append("price", coursePrice);
+    formData.append("discount", discount);
+    formData.append("thumbnail", image);
+    formData.append("chapters", JSON.stringify(chapters));
+
+    try {
+      const response = await fetch(`${backendUrl}/api/course/add`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("✅ Course added successfully!");
+        // Reset form
+        setCourseTitle("");
+        setCoursePrice(0);
+        setDiscount(0);
+        setImage(null);
+        setChapters([]);
+        quillRef.current.root.innerHTML = "";
+      } else {
+        alert("❌ Failed to add course: " + data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error submitting course");
+    }
+  };
+
   return (
     <div className="min-h-screen overflow-scroll bg-[#E3F2FD] p-6">
-      <form className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md">
+      <form
+        className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md"
+        onSubmit={handleSubmit}
+      >
         <h1 className="text-2xl font-bold mb-6 text-[#0D47A1]">Add New Course</h1>
 
         {/* Title */}
@@ -172,10 +219,7 @@ const AddCourse = () => {
             {!chapter.collapsed && (
               <div className="p-4">
                 {chapter.chapterContent.map((lecture, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center text-sm mb-2"
-                  >
+                  <div key={index} className="flex justify-between items-center text-sm mb-2">
                     <span>
                       {index + 1}. {lecture.lectureTitle} - {lecture.lectureDuration} mins -{" "}
                       <a

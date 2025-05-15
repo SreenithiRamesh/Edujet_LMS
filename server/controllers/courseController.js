@@ -1,8 +1,5 @@
-// controllers/courseController.js
 import Course from "../models/Course.js";
 
-
-// ✅ Get All Published Courses
 export const getAllCourse = async (req, res) => {
   try {
     const courses = await Course.find({ isPublished: true })
@@ -15,7 +12,6 @@ export const getAllCourse = async (req, res) => {
   }
 };
 
-// ✅ Get Course by ID
 export const getCourseId = async (req, res) => {
   const { id } = req.params;
   try {
@@ -27,7 +23,6 @@ export const getCourseId = async (req, res) => {
         .json({ success: false, message: "Course not found" });
     }
 
-    // Hide lecture URLs for non-preview content
     courseData.courseContent.forEach((chapter) => {
       chapter.chapterContent.forEach((lecture) => {
         if (!lecture.isPreviewFree) {
@@ -42,4 +37,44 @@ export const getCourseId = async (req, res) => {
   }
 };
 
+// Add this to courseController.js
+export const addCourse = async (req, res) => {
+  try {
+    const { title, description, price, discount, chapters } = req.body;
+    const thumbnail = req.file; // This will be handled by multer
 
+    // Validate required fields
+    if (!title || !description || price === undefined || discount === undefined) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing required fields" 
+      });
+    }
+
+    // Create new course
+    const newCourse = new Course({
+      courseTitle: title,
+      courseDescription: description,
+      coursePrice: price,
+      discount: discount,
+      courseThumbnail: thumbnail ? thumbnail.path : null,
+      courseContent: JSON.parse(chapters), // Parse the chapters string
+      educator: req.auth.userId, // Assuming you're using Clerk for auth
+      isPublished: true
+    });
+
+    await newCourse.save();
+
+    res.status(201).json({ 
+      success: true, 
+      message: "Course created successfully",
+      course: newCourse 
+    });
+  } catch (error) {
+    console.error("Error creating course:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};

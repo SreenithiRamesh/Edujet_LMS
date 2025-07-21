@@ -58,10 +58,7 @@ const Navbar = () => {
       <div className="hidden md:flex items-center gap-4 text-white">
         {user && (
           <>
-            <button
-              onClick={becomeEducator}
-              className={buttonClass}
-            >
+            <button onClick={becomeEducator} className={buttonClass}>
               {isEducator ? "Educator Dashboard" : "Become Educator"}
             </button>
             <Link to="/my-enrollments" className={buttonClass}>
@@ -83,10 +80,7 @@ const Navbar = () => {
       <div className="md:hidden flex items-center gap-2 text-[#0d47a1]">
         {user && (
           <>
-            <button
-              onClick={becomeEducator}
-              className={buttonClass}
-            >
+            <button onClick={becomeEducator} className={buttonClass}>
               {isEducator ? "Educator Dashboard" : "Become Educator"}
             </button>
             <Link to="/my-enrollments" className={buttonClass}>

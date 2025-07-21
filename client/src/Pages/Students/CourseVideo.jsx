@@ -19,6 +19,7 @@ const CourseVideo = () => {
     userData,
     fetchUserEnrolledCourses,
   } = useContext(AppContext);
+
   const { courseId } = useParams();
   const [courseData, setCourseData] = useState(null);
   const [openSections, setOpenSections] = useState({});
@@ -47,7 +48,7 @@ const CourseVideo = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (data.success) {
-        setProgressData(data.progressData || { lectureCompleted: [] });
+        setProgressData(data.progress || { lectureCompleted: [] });
       }
     } catch (error) {
       console.error("Error fetching progress:", error);
@@ -73,6 +74,7 @@ const CourseVideo = () => {
         lectureCompleted: [...progressData.lectureCompleted, lectureId],
       };
       setProgressData(newProgressData);
+      setCurrentVideo((prev) => ({ ...prev })); // force UI update
 
       const token = await getToken();
       const { data } = await axios.post(
@@ -147,6 +149,7 @@ const CourseVideo = () => {
   return courseData ? (
     <>
       <div className="p-4 sm:p-10 flex flex-col-reverse md:grid md:grid-cols-2 gap-10 md:px-36">
+        {/* Left Column */}
         <div className="text-gray-800">
           <h2 className="text-xl font-semibold">Course Structure</h2>
           <div className="pt-5">
@@ -233,6 +236,7 @@ const CourseVideo = () => {
               </div>
             ))}
           </div>
+
           <CourseRating
             initialRating={initialRating}
             onRate={handleRate}
@@ -242,6 +246,7 @@ const CourseVideo = () => {
           />
         </div>
 
+        {/* Right Column */}
         <div className="md:mt-10">
           {currentVideo ? (
             <div>

@@ -1,82 +1,24 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext } from "react";
 import { AppContext } from "../../Context/AppContext";
 import { Line } from "rc-progress";
 import Footer from "../../Components/Students/Footer/Footer";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Loading from "../../Components/Students/Loading/Loading";
 
 const MyEnrollments = () => {
-  const { enrolledCourses, calCourseDuration, backendUrl, getToken } =
-    useContext(AppContext);
+  const {
+    enrolledCourses,
+    calCourseDuration,
+    getCourseCompletion,
+    progressData,
+  } = useContext(AppContext);
+
   const navigate = useNavigate();
-  const [progressData, setProgressData] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  const fetchProgress = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const token = await getToken();
-      const progressMap = {};
-
-      await Promise.all(
-        enrolledCourses.map(async (course) => {
-          try {
-            const { data } = await axios.post(
-              `${backendUrl}/api/user/get-course-progress`,
-              { courseId: course._id },
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            if (data.success) {
-              progressMap[course._id] = data.progressData;
-            }
-          } catch (err) {
-            console.error(
-              `Error fetching progress for course ${course._id}:`,
-              err
-            );
-            progressMap[course._id] = { lectureCompleted: [] };
-          }
-        })
-      );
-
-      setProgressData(progressMap);
-    } catch (error) {
-      console.error("Progress fetch failed:", error);
-      setError("Failed to load course progress. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (enrolledCourses.length > 0) {
-      fetchProgress();
-    } else {
-      setIsLoading(false);
-    }
-  }, [enrolledCourses]);
-
-  if (isLoading) {
+  if (!enrolledCourses) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loading />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="text-red-500 text-lg mb-4">{error}</div>
-        <button
-          onClick={fetchProgress}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Retry
-        </button>
       </div>
     );
   }
@@ -105,37 +47,27 @@ const MyEnrollments = () => {
           My Enrollments
         </h1>
 
+        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto shadow-md rounded-lg mb-8">
           <table className="min-w-full text-left border border-[#BBDEFB] bg-white">
             <thead className="bg-[#E3F2FD] text-[#1565C0]">
               <tr>
-                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">
-                  Course
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">
-                  Duration
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">
-                  Progress
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">
-                  Status
-                </th>
+                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">Course</th>
+                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">Duration</th>
+                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">Progress</th>
+                <th className="px-6 py-3 text-left font-medium text-sm uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-50">
               {enrolledCourses.map((course) => {
-                const totalLectures =
-                  course.courseContent?.reduce(
-                    (total, chap) => total + (chap.chapterContent?.length || 0),
-                    0
-                  ) || 0;
+                const progressPercent = getCourseCompletion(course._id);
+                const totalLectures = course.courseContent?.reduce(
+                  (total, chap) => total + (chap.chapterContent?.length || 0),
+                  0
+                ) || 0;
+
                 const completed =
                   progressData[course._id]?.lectureCompleted?.length || 0;
-                const progressPercent =
-                  totalLectures > 0
-                    ? Math.round((completed * 100) / totalLectures)
-                    : 0;
 
                 return (
                   <tr
@@ -171,9 +103,7 @@ const MyEnrollments = () => {
                       {calCourseDuration(course)}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-blue-700 font-medium">
-                        {completed}
-                      </span>
+                      <span className="text-blue-700 font-medium">{completed}</span>
                       <span className="text-blue-400"> / {totalLectures}</span>
                       <span className="block text-xs text-blue-500 mt-1">
                         {progressPercent}% complete
@@ -201,19 +131,17 @@ const MyEnrollments = () => {
           </table>
         </div>
 
+        {/* Mobile Cards */}
         <div className="md:hidden space-y-4">
           {enrolledCourses.map((course) => {
-            const totalLectures =
-              course.courseContent?.reduce(
-                (total, chap) => total + (chap.chapterContent?.length || 0),
-                0
-              ) || 0;
+            const progressPercent = getCourseCompletion(course._id);
+            const totalLectures = course.courseContent?.reduce(
+              (total, chap) => total + (chap.chapterContent?.length || 0),
+              0
+            ) || 0;
+
             const completed =
               progressData[course._id]?.lectureCompleted?.length || 0;
-            const progressPercent =
-              totalLectures > 0
-                ? Math.round((completed * 100) / totalLectures)
-                : 0;
 
             return (
               <div
@@ -239,9 +167,7 @@ const MyEnrollments = () => {
                         {calCourseDuration(course)}
                       </span>
                       <span className="text-sm">
-                        <span className="text-blue-600 font-medium">
-                          {completed}
-                        </span>
+                        <span className="text-blue-600 font-medium">{completed}</span>
                         <span className="text-blue-300">/{totalLectures}</span>
                       </span>
                     </div>
@@ -253,9 +179,7 @@ const MyEnrollments = () => {
                         trailColor="#EFF6FF"
                       />
                       <div className="flex justify-between text-xs mt-1">
-                        <span className="text-blue-500">
-                          {progressPercent}% complete
-                        </span>
+                        <span className="text-blue-500">{progressPercent}% complete</span>
                         <button
                           className={`${
                             progressPercent === 100

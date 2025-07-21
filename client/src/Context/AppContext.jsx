@@ -16,13 +16,14 @@ export const AppContextProvider = (props) => {
   const { user } = useUser();
 
   const [AllCourses, SetAllCourses] = useState([]);
+  const [educatorCourses, setEducatorCourses] = useState([]); // ✅ added
   const [isEducator, SetisEducator] = useState(false);
   const [enrolledCourses, SetenrolledCourses] = useState([]);
   const [userData, SetuserData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progressData, setProgressData] = useState({});
 
-  // Fetch all published courses
+  // ✅ Fetch all published courses (public)
   const fetchAllCourses = async () => {
     setIsLoading(true);
     try {
@@ -40,7 +41,23 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // Fetch authenticated user data
+  // ✅ Fetch educator's own courses with earnings
+  const fetchEducatorCourses = async () => {
+    try {
+      const token = await getToken();
+      const { data } = await axios.get(`${backendUrl}/api/educator/my-courses`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (data.success) {
+        setEducatorCourses(data.courses);
+      }
+    } catch (error) {
+      console.error("Educator fetch error:", error);
+    }
+  };
+
+  // ✅ Fetch current user data
   const fetchUserData = async () => {
     if (!user) return;
 
@@ -62,7 +79,7 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // Fetch user's enrolled courses with progress
+  // ✅ Fetch enrolled courses + progress
   const fetchUserEnrolledCourses = async () => {
     if (!user) return;
 
@@ -83,9 +100,8 @@ export const AppContextProvider = (props) => {
         SetenrolledCourses(courses);
 
         if (progressRes.data.success) {
-          // Create a progress map: { courseId: { lectureCompleted: [...] } }
           const progressMap = {};
-          progressRes.data.progressData.forEach((progress) => {
+          (progressRes.data.progress || []).forEach((progress) => {
             progressMap[progress.courseId] = progress;
           });
           setProgressData(progressMap);
@@ -101,7 +117,7 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // Update course progress and refresh data
+  // ✅ Update course progress
   const updateCourseProgress = async (courseId, lectureId) => {
     try {
       const token = await getToken();
@@ -112,7 +128,6 @@ export const AppContextProvider = (props) => {
       );
 
       if (data.success) {
-        // Update local progress state
         setProgressData((prev) => ({
           ...prev,
           [courseId]: {
@@ -124,7 +139,6 @@ export const AppContextProvider = (props) => {
           },
         }));
 
-        // Refresh enrolled courses to update progress
         await fetchUserEnrolledCourses();
         return true;
       }
@@ -136,7 +150,7 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // Handle pending enrollments after payment
+  // ✅ Enrollment sync (post-payment)
   useEffect(() => {
     const checkPendingEnrollment = async () => {
       const pendingCourseId = localStorage.getItem("pendingEnrollment");
@@ -155,30 +169,24 @@ export const AppContextProvider = (props) => {
     checkPendingEnrollment();
   }, [user]);
 
-  // Calculate average course rating
+  // Rating
   const calRating = (course) => {
     if (!course?.CourseRating?.length) return 0;
-    const total = course.CourseRating.reduce(
-      (sum, rating) => sum + rating.rating,
-      0
-    );
+    const total = course.CourseRating.reduce((sum, rating) => sum + rating.rating, 0);
     return Math.round((total / course.CourseRating.length) * 10) / 10;
   };
 
-  // Calculate chapter duration
+  // Chapter Duration
   const calChapterTime = (chapter) => {
     if (!chapter?.chapterContent) return "0m";
     const totalMinutes = chapter.chapterContent.reduce(
       (sum, lecture) => sum + (lecture.lectureDuration || 0),
       0
     );
-    return humanizeDuration(totalMinutes * 60 * 1000, {
-      units: ["h", "m"],
-      round: true,
-    });
+    return humanizeDuration(totalMinutes * 60 * 1000, { units: ["h", "m"], round: true });
   };
 
-  // Calculate total course duration
+  // Course Duration
   const calCourseDuration = (course) => {
     if (!course?.courseContent) return "0m";
     let totalMinutes = 0;
@@ -187,13 +195,10 @@ export const AppContextProvider = (props) => {
         totalMinutes += lecture.lectureDuration || 0;
       });
     });
-    return humanizeDuration(totalMinutes * 60 * 1000, {
-      units: ["h", "m"],
-      round: true,
-    });
+    return humanizeDuration(totalMinutes * 60 * 1000, { units: ["h", "m"], round: true });
   };
 
-  // Count total lectures in course
+  // Lecture Count
   const calNoOfLectures = (course) => {
     if (!course?.courseContent) return 0;
     return course.courseContent.reduce(
@@ -202,7 +207,7 @@ export const AppContextProvider = (props) => {
     );
   };
 
-  // Calculate completion percentage for a course
+  // Completion %
   const getCourseCompletion = (courseId) => {
     if (!progressData[courseId]?.lectureCompleted) return 0;
     const course = enrolledCourses.find((c) => c._id === courseId);
@@ -210,27 +215,31 @@ export const AppContextProvider = (props) => {
 
     const totalLectures = calNoOfLectures(course);
     const completed = progressData[courseId].lectureCompleted.length;
-    return totalLectures > 0
-      ? Math.round((completed * 100) / totalLectures)
-      : 0;
+    return totalLectures > 0 ? Math.round((completed * 100) / totalLectures) : 0;
   };
 
-  // Initial data loading
+  // ✅ Initial load
   useEffect(() => {
     fetchAllCourses();
   }, []);
 
+  // ✅ On Login
   useEffect(() => {
     if (user) {
       fetchUserData();
       fetchUserEnrolledCourses();
+      if (user.publicMetadata.role === "educator") {
+        fetchEducatorCourses();
+      }
     }
   }, [user]);
 
-  // Context value
+  // ✅ Final context values
   const value = {
     currency,
     AllCourses,
+    educatorCourses,       // ✅ added
+    fetchEducatorCourses,  // ✅ added
     navigate,
     calRating,
     isEducator,
@@ -252,6 +261,8 @@ export const AppContextProvider = (props) => {
   };
 
   return (
-    <AppContext.Provider value={value}>{props.children}</AppContext.Provider>
+    <AppContext.Provider value={value}>
+      {props.children}
+    </AppContext.Provider>
   );
 };

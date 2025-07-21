@@ -88,7 +88,7 @@ const AddCourse = () => {
       const response = await fetch(`${backendUrl}/api/course/add`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${getToken()}`,
+          Authorization: `Bearer ${await getToken()}`,
         },
         body: formData,
       });
@@ -97,7 +97,6 @@ const AddCourse = () => {
 
       if (response.ok) {
         alert("✅ Course added successfully!");
-        // Reset form
         setCourseTitle("");
         setCoursePrice(0);
         setDiscount(0);
@@ -121,7 +120,6 @@ const AddCourse = () => {
       >
         <h1 className="text-2xl font-bold mb-6 text-[#0D47A1]">Add New Course</h1>
 
-        {/* Title */}
         <div className="mb-4">
           <label className="block font-medium mb-1 text-[#1976D2]">Course Title</label>
           <input
@@ -134,13 +132,11 @@ const AddCourse = () => {
           />
         </div>
 
-        {/* Description */}
         <div className="mb-4">
           <label className="block font-medium mb-1 text-[#1976D2]">Course Description</label>
           <div ref={editorRef} className="bg-white border rounded-lg h-40" />
         </div>
 
-        {/* Price and Thumbnail */}
         <div className="flex flex-col md:flex-row gap-4 mb-4">
           <div className="flex-1">
             <label className="block font-medium mb-1 text-[#1976D2]">Price ($)</label>
@@ -175,7 +171,6 @@ const AddCourse = () => {
           </div>
         </div>
 
-        {/* Discount */}
         <div className="mb-4">
           <label className="block font-medium mb-1 text-[#1976D2]">Discount (%)</label>
           <input
@@ -189,7 +184,6 @@ const AddCourse = () => {
           />
         </div>
 
-        {/* Chapters */}
         {chapters.map((chapter, chapterIndex) => (
           <div key={chapter.chapterId} className="bg-[#F5F5F5] border border-[#BBDEFB] rounded-lg mb-4">
             <div className="flex justify-between items-center p-4 border-b">
@@ -199,11 +193,11 @@ const AddCourse = () => {
                   alt=""
                   width={16}
                   onClick={() => handleChapter("toggle", chapter.chapterId)}
-                  className={`cursor-pointer transition-transform ${
-                    chapter.collapsed ? "-rotate-90" : ""
-                  }`}
+                  className={`cursor-pointer transition-transform ${chapter.collapsed ? "-rotate-90" : ""}`}
                 />
-                <h2 className="font-semibold text-[#1565C0]">{chapterIndex + 1}. {chapter.chapterTitle}</h2>
+                <h2 className="font-semibold text-[#1565C0]">
+                  {chapterIndex + 1}. {chapter.chapterTitle}
+                </h2>
               </div>
               <span className="text-sm text-gray-600">
                 {chapter.chapterContent.length} Lectures
@@ -222,12 +216,7 @@ const AddCourse = () => {
                   <div key={index} className="flex justify-between items-center text-sm mb-2">
                     <span>
                       {index + 1}. {lecture.lectureTitle} - {lecture.lectureDuration} mins -{" "}
-                      <a
-                        href={lecture.lectureUrl}
-                        className="text-[#1976D2]"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <a href={lecture.lectureUrl} className="text-[#1976D2]" target="_blank" rel="noopener noreferrer">
                         Link
                       </a>{" "}
                       - {lecture.isPreviewFree ? "Free" : "Paid"}
@@ -255,12 +244,12 @@ const AddCourse = () => {
         <button
           type="button"
           onClick={() => handleChapter("add")}
-          className="flex w-full m items-center justify-center cursor-pointer gap-2 text-xs sm:text-sm md:text-base bg-white text-[#0D47A1] font-semibold px-5 py-3 rounded-lg shadow-md border border-[#0D47A1] hover:bg-[#e3f2fd] transition duration-300"
+          className="flex w-full items-center justify-center cursor-pointer gap-2 text-xs sm:text-sm md:text-base bg-white text-[#0D47A1] font-semibold px-5 py-3 rounded-lg shadow-md border border-[#0D47A1] hover:bg-[#e3f2fd] transition duration-300"
         >
           + Add Chapter
         </button>
 
-        {/* Lecture Modal */}
+        {/* ✅ Popup with fixed lectureId and lectureOrder */}
         {showPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#90CAF9] bg-opacity-30">
             <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl relative">
@@ -322,7 +311,14 @@ const AddCourse = () => {
                       chapter.chapterId === currentChapterId
                         ? {
                             ...chapter,
-                            chapterContent: [...chapter.chapterContent, { ...lectureDetails }],
+                            chapterContent: [
+                              ...chapter.chapterContent,
+                              {
+                                ...lectureDetails,
+                                lectureId: uniqid(),
+                                lectureOrder: chapter.chapterContent.length + 1,
+                              },
+                            ],
                           }
                         : chapter
                     )

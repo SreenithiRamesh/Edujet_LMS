@@ -3,21 +3,26 @@ import { AppContext } from '../../context/AppContext';
 import Loading from '../../Components/Students/Loading/Loading';
 
 const MyCourses = () => {
-  const { currency, AllCourses } = useContext(AppContext);
-  const [courses, setCourses] = useState(null);
+  const { currency, educatorCourses } = useContext(AppContext); // ✅ updated
+  const [courses, setCourses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    setCourses(AllCourses);
-  }, [AllCourses]);
+    if (educatorCourses) {
+      setCourses(educatorCourses);
+    }
+  }, [educatorCourses]);
 
-  const filteredCourses = courses?.filter(course => {
-    const matchesSearch = course.courseTitle.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredCourses = courses.filter((course) => {
+    const matchesSearch = course.courseTitle
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+
     if (filter === 'all') return matchesSearch;
     if (filter === 'published') return matchesSearch && course.isPublished;
     if (filter === 'draft') return matchesSearch && !course.isPublished;
-    if (filter === 'top') return matchesSearch && course.enrolledStudents.length >= 50;
+    if (filter === 'top') return matchesSearch && (course.enrolledStudents?.length || 0) >= 50;
     return false;
   });
 
@@ -46,7 +51,7 @@ const MyCourses = () => {
         </select>
       </div>
 
-      {/* Table for larger screens */}
+      {/* Table layout */}
       <div className="overflow-x-auto bg-white rounded-xl shadow border border-[#BBDEFB] mt-6 hidden sm:block">
         <table className="min-w-full table-auto">
           <thead className="text-[#1565C0] bg-[#E3F2FD] text-sm text-left">
@@ -58,8 +63,8 @@ const MyCourses = () => {
             </tr>
           </thead>
           <tbody className="text-sm text-gray-700">
-            {filteredCourses.map(course => (
-              <tr key={course.id} className="border-b border-gray-200 hover:bg-[#F1F8FF]">
+            {filteredCourses.map((course) => (
+              <tr key={course._id} className="border-b border-gray-200 hover:bg-[#F1F8FF]">
                 <td className="px-4 py-3 flex items-center space-x-3">
                   <img
                     src={course.courseThumbnail}
@@ -78,27 +83,32 @@ const MyCourses = () => {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  {currency} {Math.floor(course.enrolledStudents.length * (course.coursePrice - course.discount * course.coursePrice / 100))}
+                  {currency} {Math.floor(course.totalEarnings || 0)} {/* ✅ updated */}
                 </td>
-                <td className="px-4 py-3">{course.enrolledStudents.length}</td>
+                <td className="px-4 py-3">{course.enrolledStudents?.length || 0}</td>
                 <td className="px-4 py-3">
-                  {new Date(course.CreatedAt).toLocaleDateString()}
+                  {new Date(course.createdAt).toLocaleDateString()}
                 </td>
               </tr>
             ))}
             {filteredCourses.length === 0 && (
               <tr>
-                <td colSpan="4" className="text-center py-6 text-gray-500">No courses found.</td>
+                <td colSpan="4" className="text-center py-6 text-gray-500">
+                  No courses found.
+                </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Card Layout for smaller screens */}
+      {/* Mobile card layout */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 sm:hidden">
-        {filteredCourses.map(course => (
-          <div key={course.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all duration-300">
+        {filteredCourses.map((course) => (
+          <div
+            key={course._id}
+            className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all duration-300"
+          >
             <img
               src={course.courseThumbnail}
               alt="thumbnail"
@@ -113,13 +123,15 @@ const MyCourses = () => {
               )}
             </div>
             <div className="text-sm text-gray-700 mb-4">
-              <strong>{currency} {Math.floor(course.enrolledStudents.length * (course.coursePrice - course.discount * course.coursePrice / 100))}</strong>
+              <strong>
+                {currency} {Math.floor(course.totalEarnings || 0)} {/* ✅ updated */}
+              </strong>
             </div>
             <div className="text-sm text-gray-500">
-              Students Enrolled: {course.enrolledStudents.length}
+              Students Enrolled: {course.enrolledStudents?.length || 0}
             </div>
             <div className="mt-4 text-xs text-gray-500">
-              Published On: {new Date(course.CreatedAt).toLocaleDateString()}
+              Published On: {new Date(course.createdAt).toLocaleDateString()}
             </div>
           </div>
         ))}

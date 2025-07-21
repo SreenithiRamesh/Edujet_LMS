@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { AppContext } from '../../context/AppContext'
-import { assets, dummyDashboardData, dummyStudentEnrolled } from '../../assets/assets';
+import { AppContext } from '../../context/AppContext';
+import { assets } from '../../assets/assets';
 import Loading from '../../Components/Students/Loading/Loading';
 
 const Dashboard = () => {
-  const { currency } = useContext(AppContext);
+  const { currency, educatorCourses } = useContext(AppContext);
   const [dashboardData, setDashboardData] = useState(null);
   const [darray, setDarray] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,23 +12,49 @@ const Dashboard = () => {
   const [viewedStudent, setViewedStudent] = useState(null);
 
   useEffect(() => {
-    setDashboardData(dummyDashboardData);
-    setDarray(dummyStudentEnrolled);
-  }, []);
+    if (!educatorCourses || educatorCourses.length === 0) return;
+
+    const totalCourses = educatorCourses.length;
+    // eslint-disable-next-line no-unused-vars
+    const totalEnrollments = educatorCourses.reduce(
+      (sum, c) => sum + (c.enrolledStudents?.length || 0),
+      0
+    );
+    const totalEarnings = educatorCourses.reduce(
+      (sum, c) => sum + (c.totalEarnings || 0),
+      0
+    );
+
+    const enrolledStudentsData = educatorCourses.flatMap((c) =>
+      c.enrolledStudents.map((studentId) => ({
+        student: { name: "Student", imageUrl: "https://i.pravatar.cc/150?u=" + studentId },
+        courseTitle: c.courseTitle,
+        purchaseDate: new Date(), // optional placeholder
+      }))
+    );
+
+    setDashboardData({
+      totalCourses,
+      totalEarnings: Math.round(totalEarnings),
+      enrolledStudentsData,
+    });
+
+    setDarray(enrolledStudentsData);
+  }, [educatorCourses]);
 
   const handleSortByDate = () => {
-    const sorted = [...darray].sort((a, b) => {
-      return sortAsc
+    const sorted = [...darray].sort((a, b) =>
+      sortAsc
         ? new Date(a.purchaseDate) - new Date(b.purchaseDate)
-        : new Date(b.purchaseDate) - new Date(a.purchaseDate);
-    });
+        : new Date(b.purchaseDate) - new Date(a.purchaseDate)
+    );
     setDarray(sorted);
     setSortAsc(!sortAsc);
   };
 
   const handleClear = () => {
     setSearchTerm('');
-    setDarray(dummyStudentEnrolled);
+    setDarray(dashboardData?.enrolledStudentsData || []);
   };
 
   const handleView = (entry) => {
@@ -60,7 +86,6 @@ const Dashboard = () => {
 
       {/* Top Stats */}
       <div className='flex flex-col sm:flex-row flex-wrap gap-4'>
-        {/* Stat Card */}
         {[
           {
             label: 'Total Enrollments',
@@ -91,105 +116,71 @@ const Dashboard = () => {
         ))}
       </div>
 
-    {/* Search and Sort */}
-<div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-6">
-  <h2 className="text-xl sm:text-2xl font-bold text-[#1565C0]">All Enrollments</h2>
-  <div className="flex flex-wrap gap-3 items-center w-full sm:w-auto">
-    <input
-      type="text"
-      placeholder="Search by name..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      className="px-4 py-2 w-full sm:w-72 border border-[#90CAF9] rounded-md focus:outline-none focus:ring-1 focus:ring-[#1976D2]"
-    />
-    <button
-      onClick={handleSortByDate}
-      className="text-white px-2 py-2 rounded-md bg-[#42A5F5] whitespace-nowrap"
-    >
-      Sort by Date {sortAsc ? '↑' : '↓'}
-    </button>
-    <button
-      onClick={handleClear}
-      className="text-gray-800 px-4 py-2 rounded-md bg-[#BBDEFB] whitespace-nowrap"
-    >
-      Clear
-    </button>
-  </div>
-</div>
-
-
-     
-
-   {/* Desktop Table View */}
-<div className="overflow-x-auto bg-white rounded-xl shadow border border-[#BBDEFB] mt-6 hidden sm:block">
-  <table className="min-w-full table-auto">
-    <thead className="text-[#0D47A1] bg-[#E3F2FD] text-sm text-left">
-      <tr>
-       
-        <th className="px-4 py-3 font-semibold">Name</th>
-        <th className="px-4 py-3 font-semibold">Course</th>
-        <th className="px-4 py-3 font-semibold">Purchase Date</th>
-        <th className="px-4 py-3 font-semibold">Actions</th>
-      </tr>
-    </thead>
-    <tbody className="text-sm text-gray-700">
-      {filteredArray.map((entry, index) => (
-        <tr key={index} className="border-b border-gray-200 hover:bg-[#F1F8FF]">
-         
-          <td className="md:px-4 px-2 py-3 text-[#1565c0] flex items-center space-x-3">
-          <img
-              src={entry.student.imageUrl}
-              alt={entry.student.name}
-              className="w-12 h-12 rounded-full border-2 border-[#1565C0]"
-            />
-              <span className='truncate text-sm font-medium text-[#1565C0]'>{entry.student.name}</span></td>
-          <td className="px-4 py-3 text-[#1976D2]">{entry.courseTitle}</td>
-          <td className="px-4 py-3 text-[#0D47A1]">
-            {new Date(entry.purchaseDate).toLocaleDateString()}
-          </td>
-          <td className="px-4 py-3 space-x-2">
-            <button onClick={() => handleView(entry)} className="text-[#1E88E5] hover:underline text-sm">View</button>
-            <button onClick={() => handleRemove(entry)} className="text-red-500 hover:underline text-sm">Remove</button>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-
-  {filteredArray.length === 0 && (
-    <p className="text-center text-[#90CAF9] py-6">No matching enrollments found.</p>
-  )}
-</div>
-
-{/* Mobile Card View */}
-<div className="sm:hidden mt-4 space-y-4">
-  {filteredArray.map((entry, index) => (
-    <div key={index} className="bg-white border border-[#BBDEFB] rounded-xl p-4 shadow">
-      <div className="flex items-center space-x-4 mb-2">
-        <img
-          src={entry.student.imageUrl}
-          alt={entry.student.name}
-          className="w-12 h-12 rounded-full object-cover"
-        />
-        <div>
-          <p className="text-[#1565C0] font-semibold">{entry.student.name}</p>
-          <p className="text-xs text-[#1976D2]">{entry.courseTitle}</p>
+      {/* Search and Sort */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-[#1565C0]">All Enrollments</h2>
+        <div className="flex flex-wrap gap-3 items-center w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 w-full sm:w-72 border border-[#90CAF9] rounded-md focus:outline-none focus:ring-1 focus:ring-[#1976D2]"
+          />
+          <button
+            onClick={handleSortByDate}
+            className="text-white px-2 py-2 rounded-md bg-[#42A5F5] whitespace-nowrap"
+          >
+            Sort by Date {sortAsc ? '↑' : '↓'}
+          </button>
+          <button
+            onClick={handleClear}
+            className="text-gray-800 px-4 py-2 rounded-md bg-[#BBDEFB] whitespace-nowrap"
+          >
+            Clear
+          </button>
         </div>
       </div>
-      <p className="text-sm text-[#0D47A1]">Purchased: {new Date(entry.purchaseDate).toLocaleDateString()}</p>
-      <div className="flex justify-end mt-3 space-x-4">
-        <button onClick={() => handleView(entry)} className="text-sm text-white bg-[#1E88E5] px-3 py-1 rounded hover:bg-[#1565C0] transition">View</button>
-        <button onClick={() => handleRemove(entry)} className="text-red-500 text-sm underline">Remove</button>
+
+      {/* Table view */}
+      <div className="overflow-x-auto bg-white rounded-xl shadow border border-[#BBDEFB] mt-6 hidden sm:block">
+        <table className="min-w-full table-auto">
+          <thead className="text-[#0D47A1] bg-[#E3F2FD] text-sm text-left">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Name</th>
+              <th className="px-4 py-3 font-semibold">Course</th>
+              <th className="px-4 py-3 font-semibold">Purchase Date</th>
+              <th className="px-4 py-3 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm text-gray-700">
+            {filteredArray.map((entry, index) => (
+              <tr key={index} className="border-b border-gray-200 hover:bg-[#F1F8FF]">
+                <td className="md:px-4 px-2 py-3 text-[#1565C0] flex items-center space-x-3">
+                  <img
+                    src={entry.student.imageUrl}
+                    alt={entry.student.name}
+                    className="w-12 h-12 rounded-full border-2 border-[#1565C0]"
+                  />
+                  <span className="truncate text-sm font-medium">{entry.student.name}</span>
+                </td>
+                <td className="px-4 py-3 text-[#1976D2]">{entry.courseTitle}</td>
+                <td className="px-4 py-3 text-[#0D47A1]">
+                  {new Date(entry.purchaseDate).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3 space-x-2">
+                  <button onClick={() => handleView(entry)} className="text-[#1E88E5] hover:underline text-sm">View</button>
+                  <button onClick={() => handleRemove(entry)} className="text-red-500 hover:underline text-sm">Remove</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {filteredArray.length === 0 && (
+          <p className="text-center text-[#90CAF9] py-6">No matching enrollments found.</p>
+        )}
       </div>
-    </div>
-  ))}
-
-  {filteredArray.length === 0 && (
-    <p className="text-center text-[#90CAF9] py-6">No matching enrollments found.</p>
-  )}
-</div>
-
-
 
       {/* Modal */}
       {viewedStudent && (
@@ -205,7 +196,10 @@ const Dashboard = () => {
             </div>
             <p><strong>Purchased On:</strong> {new Date(viewedStudent.purchaseDate).toLocaleDateString()}</p>
             <div className="mt-4 text-right">
-              <button onClick={handleCloseModal} className="text-xs sm:text-sm md:text-base bg-gradient-to-r from-[#64B5F6] via-[#1E88E5] to-[#0D47A1] text-white font-semibold px-3 py-2 rounded shadow-md hover:shadow-xl transition duration-300 cursor-pointer">
+              <button
+                onClick={handleCloseModal}
+                className="text-xs sm:text-sm md:text-base bg-gradient-to-r from-[#64B5F6] via-[#1E88E5] to-[#0D47A1] text-white font-semibold px-3 py-2 rounded shadow-md hover:shadow-xl transition duration-300 cursor-pointer"
+              >
                 Close
               </button>
             </div>

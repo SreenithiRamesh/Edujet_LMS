@@ -1,19 +1,36 @@
-import React, { useEffect, useState } from 'react';
-import { dummyStudentEnrolled } from '../../assets/assets';
-import Loading from "../../Components/Students/Loading/Loading"
+import React, { useContext, useEffect, useState } from 'react';
+import { AppContext } from '../../context/AppContext';
+import axios from 'axios';
+import Loading from "../../Components/Students/Loading/Loading";
 
 const StudentsEnrolled = () => {
-
-  const [EnrolledStudents, setEnrolledStudents] = useState(null)
-  const fetchEnrolledStudents = async () => {
-    setEnrolledStudents(dummyStudentEnrolled)
-  }
+  const { backendUrl, getToken } = useContext(AppContext);
+  const [enrolledStudents, setEnrolledStudents] = useState(null);
 
   useEffect(() => {
-    fetchEnrolledStudents()
-  }, [])
+    const fetchEnrolledStudents = async () => {
+      try {
+        const token = await getToken();
+        const { data } = await axios.get(`${backendUrl}/api/educator/enrolled-students`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-  return EnrolledStudents ? (
+        if (data.success) {
+          setEnrolledStudents(data.enrolledStudents);
+        } else {
+          console.error("Failed to fetch students:", data.message);
+        }
+      } catch (err) {
+        console.error("Failed to fetch enrolled students:", err);
+      }
+    };
+
+    fetchEnrolledStudents();
+  }, []);
+
+  return enrolledStudents ? (
     <div className='min-h-screen bg-white w-full px-6 md:px-12 py-10'>
       <div>
         <h2 className="text-3xl font-semibold text-[#0D47A1] mb-8">Students Enrolled</h2>
@@ -28,23 +45,32 @@ const StudentsEnrolled = () => {
               </tr>
             </thead>
             <tbody className="text-sm text-gray-800">
-              {EnrolledStudents.map((item, index) => (
+              {enrolledStudents.map((item, index) => (
                 <tr key={index} className='border-b border-[#BBDEFB] hover:bg-[#F1F8FF]'>
                   <td className='px-4 py-4 text-center hidden sm:table-cell'>{index + 1}</td>
                   <td className='md:px-6 px-3 py-4 flex items-center space-x-4'>
-                    <img src={item.student.imageUrl} alt='img' className='w-12 h-12 rounded-full border-2 border-[#1565C0]' />
+                    <img
+                      src={item.student.imageUrl}
+                      alt='student'
+                      className='w-12 h-12 rounded-full border-2 border-[#1565C0]'
+                    />
                     <span className='truncate text-sm font-medium text-[#1565C0]'>{item.student.name}</span>
                   </td>
                   <td className='px-4 py-4 text-[#2196F3]'>{item.courseTitle}</td>
                   <td className='px-4 py-4 hidden sm:table-cell'>{new Date(item.purchaseDate).toLocaleDateString()}</td>
                 </tr>
               ))}
+              {enrolledStudents.length === 0 && (
+                <tr>
+                  <td colSpan="4" className="text-center py-6 text-gray-500">No students enrolled yet.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
     </div>
-  ) : <Loading />
-}
+  ) : <Loading />;
+};
 
 export default StudentsEnrolled;

@@ -12,10 +12,6 @@ import courseRouter from "./routes/courseRoute.js";
 import userRouter from "./routes/userRoutes.js";
 import checkoutRouter from "./routes/checkoutRoutes.js";
 
-
-
-
-
 const app = express();
 
 // Middleware
@@ -27,8 +23,9 @@ app.get("/", (req, res) => {
   res.send("API Working :)");
 });
 
-// Stripe webhook route
-app.post("/stripe-webhook", 
+// Stripe webhook route (raw body for signature validation)
+app.post(
+  "/stripe-webhook",
   express.raw({ type: "application/json" }),
   (req, res, next) => {
     req.rawBody = req.body.toString();
@@ -37,9 +34,9 @@ app.post("/stripe-webhook",
   stripeWebhooks
 );
 
-// Parse JSON for other routes
-app.use(express.json({ limit: "10mb" }));
+// ✅ Parse form-data before JSON
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
 
 // Routes
 app.post("/clerk", clerkWebhooks);
@@ -48,28 +45,28 @@ app.use("/api/course", courseRouter);
 app.use("/api/user", userRouter);
 app.use("/api/checkout", checkoutRouter);
 
-// Error handling
+// Global error handler
 app.use((err, req, res, next) => {
   console.error("Global error handler:", err);
-  res.status(500).json({ 
-    success: false, 
-    message: err.message || "Internal Server Error" 
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
   });
 });
 
-// Start server
+// Server start logic
 const startServer = async () => {
   try {
     await connectDB();
-    console.log("Database connected");
+    console.log("✅ Database connected");
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Stripe webhook endpoint: http://localhost:${PORT}/stripe-webhook`);
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🔗 Stripe webhook endpoint: http://localhost:${PORT}/stripe-webhook`);
     });
   } catch (error) {
-    console.error("Failed to connect to MongoDB:", error);
+    console.error("❌ Failed to connect to MongoDB:", error);
     process.exit(1);
   }
 };

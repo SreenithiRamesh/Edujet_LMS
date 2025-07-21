@@ -1,4 +1,5 @@
 import Course from "../models/Course.js";
+import cloudinary from "../configs/cloudinary.js";
 
 export const getAllCourse = async (req, res) => {
   try {
@@ -37,44 +38,66 @@ export const getCourseId = async (req, res) => {
   }
 };
 
-// Add this to courseController.js
 export const addCourse = async (req, res) => {
   try {
     const { title, description, price, discount, chapters } = req.body;
-    const thumbnail = req.file; // This will be handled by multer
+    const file = req.file;
 
-    // Validate required fields
-    if (!title || !description || price === undefined || discount === undefined) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Missing required fields" 
+    if (!title || !description || !price || !discount || !chapters) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
       });
     }
 
-    // Create new course
+    let thumbnailUrl = null;
+
+    // ✅ Upload to Cloudinary as a promise
+    if (file) {
+      const uploadPromise = () =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "Edujet_Thumbnails",
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result.secure_url);
+            }
+          );
+          stream.end(file.buffer);
+        });
+
+      thumbnailUrl = await uploadPromise();
+    } else {
+      return res.status(400).json({ success: false, message: "Thumbnail is required" });
+    }
+
+    // ✅ Create course
     const newCourse = new Course({
       courseTitle: title,
       courseDescription: description,
       coursePrice: price,
-      discount: discount,
-      courseThumbnail: thumbnail ? thumbnail.path : null,
-      courseContent: JSON.parse(chapters), // Parse the chapters string
-      educator: req.auth.userId, // Assuming you're using Clerk for auth
-      isPublished: true
+      discount,
+      courseThumbnail: thumbnailUrl,
+      courseContent: JSON.parse(chapters),
+      educator: req.auth.userId,
+      isPublished: true,
     });
 
     await newCourse.save();
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       message: "Course created successfully",
-      course: newCourse 
+      course: newCourse,
     });
   } catch (error) {
     console.error("Error creating course:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
     });
   }
 };

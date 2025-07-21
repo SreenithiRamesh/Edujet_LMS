@@ -1,8 +1,10 @@
 import { clerkClient } from "@clerk/express";
 import Course from "../models/Course.js";
-import cloudinary from "../configs/cloudinary.js"; // Now directly importing configured instance
+import cloudinary from "../configs/cloudinary.js";
+import { Purchase } from "../models/Purchase.js";
+import User from "../models/User.js";
 
-//  Update user role to educator
+// ✅ 1. Update user role to educator
 export const updateRoleToEducator = async (req, res) => {
   try {
     const userId = req.auth.userId;
@@ -19,7 +21,7 @@ export const updateRoleToEducator = async (req, res) => {
   }
 };
 
-// Add course controller
+// ✅ 2. Add course controller
 export const addCourse = async (req, res) => {
   try {
     const imageFile = req.file;
@@ -41,11 +43,9 @@ export const addCourse = async (req, res) => {
     const parsedCourseData = JSON.parse(courseData);
     parsedCourseData.educator = educatorId;
 
-    // Upload image to Cloudinary
     const imageUpload = await cloudinary.uploader.upload(imageFile.path);
     parsedCourseData.courseThumbnail = imageUpload.secure_url;
 
-    // Create and store new course
     const newCourse = await Course.create(parsedCourseData);
 
     return res.json({
@@ -58,7 +58,7 @@ export const addCourse = async (req, res) => {
   }
 };
 
-// Get Educator Courses
+// ✅ 3. Get educator's own courses
 export const getEducatorCourses = async (req, res) => {
   try {
     const educator = req.auth.userId;
@@ -69,34 +69,28 @@ export const getEducatorCourses = async (req, res) => {
   }
 };
 
-// Get Educator Dashboard Data (
-// TotalEarnings,
-// EnrolledStudents,
-// Node. OF courses)
-
+// ✅ 4. Educator dashboard metrics
 export const educatorDashboardData = async (req, res) => {
   try {
     const educator = req.auth.userId;
     const courses = await Course.find({ educator });
     const totalCourses = courses.length;
     const courseIds = courses.map((course) => course._id);
-    // Calculate total earnings from purchases
+
     const purchases = await Purchase.find({
       courseId: { $in: courseIds },
       status: "completed",
     });
+
     const totalEarnings = purchases.reduce(
       (sum, purchase) => sum + purchase.amount,
       0
     );
 
-    // Collect unique enrolled student IDs with their course titles
     const enrolledStudentsData = [];
     for (const course of courses) {
       const students = await User.find(
-        {
-          _id: { $in: course.enrolledStudents },
-        },
+        { _id: { $in: course.enrolledStudents } },
         "name imageUrl"
       );
       students.forEach((student) => {
@@ -120,13 +114,13 @@ export const educatorDashboardData = async (req, res) => {
   }
 };
 
-// get enrolled students data with purchase data
-
+// ✅ 5. Get enrolled students with purchase data
 export const getEnrolledStudentsData = async (req, res) => {
   try {
     const educator = req.auth.userId;
     const courses = await Course.find({ educator });
     const courseIds = courses.map((course) => course._id);
+
     const purchases = await Purchase.find({
       courseId: { $in: courseIds },
       status: "completed",
@@ -139,8 +133,41 @@ export const getEnrolledStudentsData = async (req, res) => {
       courseTitle: purchase.courseId.courseTitle,
       purchaseDate: purchase.createdAt,
     }));
-    res.json({success:true,enrolledStudents})
+
+    res.json({ success: true, enrolledStudents });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ✅ 6. Get educator courses with individual earnings (🚀 NEW FUNCTION)
+export const getEducatorCoursesWithEarnings = async (req, res) => {
+  try {
+    const educatorId = req.auth.userId;
+    const courses = await Course.find({ educator: educatorId });
+
+    const courseData = await Promise.all(
+      courses.map(async (course) => {
+        const purchases = await Purchase.find({
+          courseId: course._id,
+          status: "completed",
+        });
+
+        const totalEarnings = purchases.reduce(
+          (sum, p) => sum + parseFloat(p.amount),
+          0
+        );
+
+        return {
+          ...course.toObject(),
+          totalEarnings,
+        };
+      })
+    );
+
+    res.json({ success: true, courses: courseData });
+  } catch (error) {
+    console.error("Earnings fetch error:", error);
+    res.status(500).json({ success: false, message: "Failed to load courses" });
   }
 };

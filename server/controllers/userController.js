@@ -198,3 +198,26 @@ export const addUserRating = async (req, res) => {
     return res.status(500).json({ success: false, message: "Rating Failed" });
   }
 };
+export const getAllUserProgress = async (req, res) => {
+  try {
+    const userId = req.auth.userId.toString();
+
+    // Fetch all course progress for the user
+    const progressList = await CourseProgress.find({ userId });
+
+    // Fetch all enrolled course data for context (optional)
+    const user = await User.findById(userId).populate("enrolledCourses");
+
+    res.json({
+      success: true,
+      progress: progressList,
+      enrolledCourses: user?.enrolledCourses || [],
+    });
+  } catch (error) {
+    console.error("Get All Progress Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch progress data",
+    });
+  }
+};

@@ -12,7 +12,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@clerk/express": "^1.4.7",
+    "@clerk/clerk-sdk-node": "^4.13.23",
+    "@clerk/express": "^1.7.10",
     "cloudinary": "^2.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -26,8 +27,10 @@
     "nodemailer": "^7.0.5",
     "nodemon": "^3.1.9",
     "pdfkit": "^0.17.1",
+    "qrcode": "^1.5.4",
     "serverless-http": "^3.2.0",
     "stripe": "^18.0.0",
-    "svix": "^1.42.0"
+    "svix": "^1.42.0",
+    "uuid": "^11.1.0"
   }
 }

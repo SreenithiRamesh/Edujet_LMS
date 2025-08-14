@@ -98,12 +98,11 @@ const CourseDetails = () => {
     return match ? match[1] : null;
   };
 
-  // Fetch course data on mount
+
   useEffect(() => {
     fetchCourseData();
   }, [id]);
 
-  // Check enrollment status when user or course data changes
   useEffect(() => {
     if (userData && courseData) {
       setIsAlreadyEnrolled(userData.enrolledCourses.includes(courseData._id));
@@ -262,7 +261,7 @@ const CourseDetails = () => {
           </div>
         </div>
 
-        {/* Right Column - Course Summary */}
+
         <div className="max-w-[424px] z-10 shadow-[0px_4px_15px_2px_rgba(0,0,0,0.1)] rounded-t md:rounded-none overflow-hidden bg-white min-w-[300px] sm:min-w-[420px]">
           {previewVideo ? (
             <YouTube

@@ -47,7 +47,6 @@ const MyEnrollments = () => {
           My Enrollments
         </h1>
 
-        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto shadow-md rounded-lg mb-8">
           <table className="min-w-full text-left border border-[#BBDEFB] bg-white">
             <thead className="bg-[#E3F2FD] text-[#1565C0]">
@@ -131,7 +130,6 @@ const MyEnrollments = () => {
           </table>
         </div>
 
-        {/* Mobile Cards */}
         <div className="md:hidden space-y-4">
           {enrolledCourses.map((course) => {
             const progressPercent = getCourseCompletion(course._id);

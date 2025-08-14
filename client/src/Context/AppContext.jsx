@@ -16,14 +16,14 @@ export const AppContextProvider = (props) => {
   const { user } = useUser();
 
   const [AllCourses, SetAllCourses] = useState([]);
-  const [educatorCourses, setEducatorCourses] = useState([]); // ✅ added
+  const [educatorCourses, setEducatorCourses] = useState([]); 
   const [isEducator, SetisEducator] = useState(false);
   const [enrolledCourses, SetenrolledCourses] = useState([]);
   const [userData, SetuserData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progressData, setProgressData] = useState({});
 
-  // ✅ Fetch all published courses (public)
+ 
   const fetchAllCourses = async () => {
     setIsLoading(true);
     try {
@@ -41,7 +41,7 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // ✅ Fetch educator's own courses with earnings
+ 
   const fetchEducatorCourses = async () => {
     try {
       const token = await getToken();
@@ -57,7 +57,6 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // ✅ Fetch current user data
   const fetchUserData = async () => {
     if (!user) return;
 
@@ -79,7 +78,6 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // ✅ Fetch enrolled courses + progress
   const fetchUserEnrolledCourses = async () => {
     if (!user) return;
 
@@ -117,7 +115,7 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // ✅ Update course progress
+ 
   const updateCourseProgress = async (courseId, lectureId) => {
     try {
       const token = await getToken();
@@ -150,7 +148,7 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // ✅ Enrollment sync (post-payment)
+  
   useEffect(() => {
     const checkPendingEnrollment = async () => {
       const pendingCourseId = localStorage.getItem("pendingEnrollment");
@@ -218,12 +216,12 @@ export const AppContextProvider = (props) => {
     return totalLectures > 0 ? Math.round((completed * 100) / totalLectures) : 0;
   };
 
-  // ✅ Initial load
+
   useEffect(() => {
     fetchAllCourses();
   }, []);
 
-  // ✅ On Login
+  
   useEffect(() => {
     if (user) {
       fetchUserData();
@@ -234,12 +232,12 @@ export const AppContextProvider = (props) => {
     }
   }, [user]);
 
-  // ✅ Final context values
+
   const value = {
     currency,
     AllCourses,
-    educatorCourses,       // ✅ added
-    fetchEducatorCourses,  // ✅ added
+    educatorCourses,       
+    fetchEducatorCourses, 
     navigate,
     calRating,
     isEducator,

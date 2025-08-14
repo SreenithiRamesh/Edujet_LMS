@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { AppContext } from '../../../context/AppContext';
 import Loading from '../../Components/Students/Loading/Loading';
 
 const MyCourses = () => {
-  const { currency, educatorCourses } = useContext(AppContext); // ✅ updated
+  const { currency, educatorCourses } = useContext(AppContext); 
   const [courses, setCourses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('all');

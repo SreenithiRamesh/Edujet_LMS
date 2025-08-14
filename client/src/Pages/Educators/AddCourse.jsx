@@ -96,7 +96,7 @@ const AddCourse = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("✅ Course added successfully!");
+        alert("Course added successfully!");
         setCourseTitle("");
         setCoursePrice(0);
         setDiscount(0);
@@ -104,11 +104,11 @@ const AddCourse = () => {
         setChapters([]);
         quillRef.current.root.innerHTML = "";
       } else {
-        alert("❌ Failed to add course: " + data.message);
+        alert(" Failed to add course: " + data.message);
       }
     } catch (error) {
       console.error(error);
-      alert("❌ Error submitting course");
+      alert("Error submitting course");
     }
   };
 
@@ -249,7 +249,6 @@ const AddCourse = () => {
           + Add Chapter
         </button>
 
-        {/* ✅ Popup with fixed lectureId and lectureOrder */}
         {showPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#90CAF9] bg-opacity-30">
             <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl relative">

@@ -4,7 +4,7 @@ import cloudinary from "../configs/cloudinary.js";
 import { Purchase } from "../models/Purchase.js";
 import User from "../models/User.js";
 
-// ✅ 1. Update user role to educator
+
 export const updateRoleToEducator = async (req, res) => {
   try {
     const userId = req.auth.userId;
@@ -21,7 +21,7 @@ export const updateRoleToEducator = async (req, res) => {
   }
 };
 
-// ✅ 2. Add course controller
+
 export const addCourse = async (req, res) => {
   try {
     const imageFile = req.file;
@@ -58,7 +58,7 @@ export const addCourse = async (req, res) => {
   }
 };
 
-// ✅ 3. Get educator's own courses
+
 export const getEducatorCourses = async (req, res) => {
   try {
     const educator = req.auth.userId;
@@ -69,7 +69,6 @@ export const getEducatorCourses = async (req, res) => {
   }
 };
 
-// ✅ 4. Educator dashboard metrics
 export const educatorDashboardData = async (req, res) => {
   try {
     const educator = req.auth.userId;
@@ -114,7 +113,7 @@ export const educatorDashboardData = async (req, res) => {
   }
 };
 
-// ✅ 5. Get enrolled students with purchase data
+
 export const getEnrolledStudentsData = async (req, res) => {
   try {
     const educator = req.auth.userId;
@@ -140,7 +139,6 @@ export const getEnrolledStudentsData = async (req, res) => {
   }
 };
 
-// ✅ 6. Get educator courses with individual earnings (🚀 NEW FUNCTION)
 export const getEducatorCoursesWithEarnings = async (req, res) => {
   try {
     const educatorId = req.auth.userId;
@@ -169,5 +167,29 @@ export const getEducatorCoursesWithEarnings = async (req, res) => {
   } catch (error) {
     console.error("Earnings fetch error:", error);
     res.status(500).json({ success: false, message: "Failed to load courses" });
+  }
+};
+
+
+
+export const educatorOnboard = async (req, res) => {
+  try {
+    const { displayName, bio, expertise } = req.body;
+    const userId = req.auth.userId;
+
+    await clerkClient.users.updateUserMetadata(userId, {
+      publicMetadata: {
+        role: "educator",
+        onboarded: true,
+        displayName,
+        bio,
+        expertise,
+      },
+    });
+
+    return res.json({ success: true, message: "Onboarded successfully" });
+  } catch (err) {
+    console.error("Educator Onboarding Error:", err);
+    res.status(500).json({ success: false, message: "Failed to onboard" });
   }
 };

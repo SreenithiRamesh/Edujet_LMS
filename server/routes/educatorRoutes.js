@@ -5,13 +5,16 @@ import {
   getEducatorCourses,
   educatorDashboardData,
   getEnrolledStudentsData,
-  getEducatorCoursesWithEarnings // ✅ new import
+  getEducatorCoursesWithEarnings,educatorOnboard , // ✅ new import
 } from "../controllers/educatorController.js";
+import { requireSignIn } from "../middlewares/authMiddleware.js";
 
 import upload from "../configs/multer.js";
 import { protectEducator } from "../middlewares/authMiddleware.js";
 
 const educatorRouter = express.Router();
+
+educatorRouter.post("/onboard", requireSignIn, educatorOnboard);
 
 // ✅ Existing routes
 educatorRouter.get("/update-role", updateRoleToEducator);

@@ -74,7 +74,7 @@ const CourseVideo = () => {
         lectureCompleted: [...progressData.lectureCompleted, lectureId],
       };
       setProgressData(newProgressData);
-      setCurrentVideo((prev) => ({ ...prev })); // force UI update
+      setCurrentVideo((prev) => ({ ...prev }));
 
       const token = await getToken();
       const { data } = await axios.post(
@@ -146,6 +146,32 @@ const CourseVideo = () => {
     return match ? match[1] : null;
   };
 
+  const handleDownloadCertificate = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetch(`${backendUrl}/api/user/generate-certificate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ courseId }),
+      });
+
+      if (!response.ok) throw new Error("Failed to download certificate");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${courseData.courseTitle}_certificate.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err.message || "Something went wrong");
+    }
+  };
+
   return courseData ? (
     <>
       <div className="p-4 sm:p-10 flex flex-col-reverse md:grid md:grid-cols-2 gap-10 md:px-36">
@@ -154,10 +180,7 @@ const CourseVideo = () => {
           <h2 className="text-xl font-semibold">Course Structure</h2>
           <div className="pt-5">
             {courseData.courseContent?.map((chapter, index) => (
-              <div
-                key={index}
-                className="border border-gray-300 bg-white mb-2 rounded"
-              >
+              <div key={index} className="border border-gray-300 bg-white mb-2 rounded">
                 <div
                   className="flex items-center justify-between px-4 py-3 cursor-pointer select-none"
                   onClick={() => toggleSection(index)}
@@ -170,13 +193,10 @@ const CourseVideo = () => {
                         openSections[index] ? "rotate-180" : "rotate-0"
                       }`}
                     />
-                    <p className="font-medium md:text-base text-sm">
-                      {chapter.chapterTitle}
-                    </p>
+                    <p className="font-medium md:text-base text-sm">{chapter.chapterTitle}</p>
                   </div>
                   <p className="text-sm md:text-[15px]">
-                    {chapter.chapterContent?.length || 0} lectures -{" "}
-                    {calChapterTime(chapter)}
+                    {chapter.chapterContent?.length || 0} lectures - {calChapterTime(chapter)}
                   </p>
                 </div>
                 <div
@@ -189,9 +209,7 @@ const CourseVideo = () => {
                       <li key={i} className="flex items-start gap-2 py-1">
                         <img
                           src={
-                            progressData.lectureCompleted.includes(
-                              lecture.lectureId
-                            )
+                            progressData.lectureCompleted.includes(lecture.lectureId)
                               ? assets.blue_tick_icon
                               : assets.play_icon
                           }
@@ -203,9 +221,7 @@ const CourseVideo = () => {
                           <div className="flex gap-2">
                             <p
                               onClick={() => {
-                                const videoId = extractVideoId(
-                                  lecture.lectureUrl
-                                );
+                                const videoId = extractVideoId(lecture.lectureUrl);
                                 if (videoId) {
                                   setCurrentVideo({
                                     ...lecture,
@@ -222,10 +238,9 @@ const CourseVideo = () => {
                               Watch
                             </p>
                             <p>
-                              {humanizeDuration(
-                                lecture.lectureDuration * 60 * 1000,
-                                { units: ["h", "m"] }
-                              )}
+                              {humanizeDuration(lecture.lectureDuration * 60 * 1000, {
+                                units: ["h", "m"],
+                              })}
                             </p>
                           </div>
                         </div>
@@ -250,36 +265,26 @@ const CourseVideo = () => {
         <div className="md:mt-10">
           {currentVideo ? (
             <div>
-              <YouTube
-                videoId={currentVideo.videoId}
-                iframeClassName="w-full aspect-video"
-              />
+              <YouTube videoId={currentVideo.videoId} iframeClassName="w-full aspect-video" />
               <div className="flex justify-between items-center mt-5 shadow-sm p-1">
                 <p>
-                  {currentVideo.chapter}.{currentVideo.lecture}{" "}
-                  {currentVideo.lectureTitle}
+                  {currentVideo.chapter}.{currentVideo.lecture} {currentVideo.lectureTitle}
                 </p>
                 <button
                   onClick={() => markLectureAsCompleted(currentVideo.lectureId)}
                   disabled={
                     isProcessing ||
-                    progressData.lectureCompleted.includes(
-                      currentVideo.lectureId
-                    )
+                    progressData.lectureCompleted.includes(currentVideo.lectureId)
                   }
                   className={`text-xs sm:text-sm md:text-base font-semibold px-3 py-2 rounded-lg shadow-md transition ${
-                    progressData.lectureCompleted.includes(
-                      currentVideo.lectureId
-                    )
+                    progressData.lectureCompleted.includes(currentVideo.lectureId)
                       ? isCourseComplete()
                         ? "bg-green-500 text-white"
                         : "bg-gray-400 text-white cursor-not-allowed"
                       : "bg-gradient-to-r from-[#64B5F6] via-[#1E88E5] to-[#0D47A1] text-white hover:scale-105"
                   }`}
                 >
-                  {progressData.lectureCompleted.includes(
-                    currentVideo.lectureId
-                  )
+                  {progressData.lectureCompleted.includes(currentVideo.lectureId)
                     ? isCourseComplete()
                       ? "Course Completed"
                       : "Lecture Completed"
@@ -288,6 +293,17 @@ const CourseVideo = () => {
                     : "Mark as Complete"}
                 </button>
               </div>
+
+              {isCourseComplete() && (
+                <div className="mt-5">
+                  <button
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                    onClick={handleDownloadCertificate}
+                  >
+                    🎓 Download Certificate
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="w-full aspect-video bg-gray-100 flex items-center justify-center">

@@ -5,7 +5,7 @@ export const createCheckoutSession = async (req, res) => {
   const YOUR_DOMAIN = process.env.YOUR_DOMAIN || "http://localhost:3000";
 
   try {
-    const { purchaseId, userId, courseId } = req.body; // Added metadata fields
+    const { purchaseId, userId, courseId } = req.body; 
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],

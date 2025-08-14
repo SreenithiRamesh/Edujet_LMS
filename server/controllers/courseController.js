@@ -52,7 +52,7 @@ export const addCourse = async (req, res) => {
 
     let thumbnailUrl = null;
 
-    // ✅ Upload to Cloudinary as a promise
+
     if (file) {
       const uploadPromise = () =>
         new Promise((resolve, reject) => {
@@ -74,7 +74,6 @@ export const addCourse = async (req, res) => {
       return res.status(400).json({ success: false, message: "Thumbnail is required" });
     }
 
-    // ✅ Create course
     const newCourse = new Course({
       courseTitle: title,
       courseDescription: description,

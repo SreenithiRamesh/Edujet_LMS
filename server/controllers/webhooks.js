@@ -6,7 +6,7 @@ import Course from "../models/Course.js";
 
 const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Clerk webhooks handler
+
 export const clerkWebhooks = async (req, res) => {
   try {
     const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET_KEY);
@@ -56,7 +56,7 @@ export const clerkWebhooks = async (req, res) => {
   }
 };
 
-// Stripe webhooks handler
+
 export const stripeWebhooks = async (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;

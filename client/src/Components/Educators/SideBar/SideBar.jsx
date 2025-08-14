@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { AppContext } from '../../../context/AppContext'
+import { AppContext } from '../../../Context/AppContext'
 import { assets } from "../../../assets/assets";
 
 const SideBar = () => {
@@ -19,7 +19,7 @@ const SideBar = () => {
   <NavLink
     to={item.path}
     key={item.name}
-    end={item.path === '/educator'}  // 👈 only apply exact match to Dashboard
+    end={item.path === '/educator'}  
     className={({ isActive }) =>
       `flex items-center gap-3 px-4 py-3 mx-2 rounded-md transition font-medium 
        ${isActive ? 'bg-[#90caf9] text-white shadow-sm' : 'hover:bg-[#bbdefb] hover:text-[#0D47A1] text-[#0D47A1]'}`

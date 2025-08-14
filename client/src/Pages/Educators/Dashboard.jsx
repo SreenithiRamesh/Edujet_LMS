@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { AppContext } from '../../Context/AppContext';
 import { assets } from '../../assets/assets';
 import Loading from '../../Components/Students/Loading/Loading';
+import axios from 'axios';
 
 const Dashboard = () => {
-  const { currency, educatorCourses } = useContext(AppContext);
+  const { backendUrl, getToken, currency } = useContext(AppContext);
   const [dashboardData, setDashboardData] = useState(null);
   const [darray, setDarray] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,35 +13,41 @@ const Dashboard = () => {
   const [viewedStudent, setViewedStudent] = useState(null);
 
   useEffect(() => {
-    if (!educatorCourses || educatorCourses.length === 0) return;
+    const fetchDashboard = async () => {
+      try {
+        const token = await getToken();
+        const { data } = await axios.get(`${backendUrl}/api/educator/enrolled-students`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-    const totalCourses = educatorCourses.length;
-    // eslint-disable-next-line no-unused-vars
-    const totalEnrollments = educatorCourses.reduce(
-      (sum, c) => sum + (c.enrolledStudents?.length || 0),
-      0
-    );
-    const totalEarnings = educatorCourses.reduce(
-      (sum, c) => sum + (c.totalEarnings || 0),
-      0
-    );
+        if (data.success) {
+          const courses = await axios.get(`${backendUrl}/api/educator/courses`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
 
-    const enrolledStudentsData = educatorCourses.flatMap((c) =>
-      c.enrolledStudents.map((studentId) => ({
-        student: { name: "Student", imageUrl: "https://i.pravatar.cc/150?u=" + studentId },
-        courseTitle: c.courseTitle,
-        purchaseDate: new Date(), // optional placeholder
-      }))
-    );
+          const earningsRes = await axios.get(`${backendUrl}/api/educator/my-courses`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
 
-    setDashboardData({
-      totalCourses,
-      totalEarnings: Math.round(totalEarnings),
-      enrolledStudentsData,
-    });
+          const totalEarnings = earningsRes.data.courses.reduce(
+            (sum, course) => sum + course.totalEarnings, 0
+          );
 
-    setDarray(enrolledStudentsData);
-  }, [educatorCourses]);
+          setDashboardData({
+            totalCourses: courses.data.courses.length,
+            totalEarnings,
+            enrolledStudentsData: data.enrolledStudents,
+          });
+
+          setDarray(data.enrolledStudents);
+        }
+      } catch (err) {
+        console.error("Dashboard Error:", err);
+      }
+    };
+
+    fetchDashboard();
+  }, []);
 
   const handleSortByDate = () => {
     const sorted = [...darray].sort((a, b) =>
@@ -64,18 +71,16 @@ const Dashboard = () => {
   const handleRemove = (entry) => {
     const updated = darray.filter(
       (item) =>
-        item.student.name !== entry.student.name ||
+        item.student._id !== entry.student._id ||
         item.courseTitle !== entry.courseTitle
     );
     setDarray(updated);
   };
 
-  const handleCloseModal = () => {
-    setViewedStudent(null);
-  };
+  const handleCloseModal = () => setViewedStudent(null);
 
   const filteredArray = darray.filter((entry) =>
-    entry.student.name.toLowerCase().includes(searchTerm.toLowerCase())
+    entry.student?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!dashboardData) return <Loading />;
@@ -103,10 +108,7 @@ const Dashboard = () => {
             icon: assets.earning_icon,
           },
         ].map((stat, i) => (
-          <div
-            key={i}
-            className='flex items-center gap-4 shadow-md p-4 w-full sm:w-56 rounded-lg bg-[#E3F2FD] border border-[#64B5F6]'
-          >
+          <div key={i} className='flex items-center gap-4 shadow-md p-4 w-full sm:w-56 rounded-lg bg-[#E3F2FD] border border-[#64B5F6]'>
             <img src={stat.icon} alt={stat.label} className="w-10 h-10" />
             <div>
               <p className='text-xl font-semibold text-[#1565C0]'>{stat.value}</p>
@@ -149,7 +151,7 @@ const Dashboard = () => {
             <tr>
               <th className="px-4 py-3 font-semibold">Name</th>
               <th className="px-4 py-3 font-semibold">Course</th>
-              <th className="px-4 py-3 font-semibold">Purchase Date</th>
+              <th className="px-4 py-3 font-semibold">Date</th>
               <th className="px-4 py-3 font-semibold">Actions</th>
             </tr>
           </thead>
@@ -158,16 +160,17 @@ const Dashboard = () => {
               <tr key={index} className="border-b border-gray-200 hover:bg-[#F1F8FF]">
                 <td className="md:px-4 px-2 py-3 text-[#1565C0] flex items-center space-x-3">
                   <img
-                    src={entry.student.imageUrl}
+                    src={entry.student.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${entry.student.name}`}
                     alt={entry.student.name}
                     className="w-12 h-12 rounded-full border-2 border-[#1565C0]"
                   />
-                  <span className="truncate text-sm font-medium">{entry.student.name}</span>
+                  <div>
+                    <p className="font-medium">{entry.student.name}</p>
+                    <p className="text-xs text-gray-500">{entry.student.email}</p>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-[#1976D2]">{entry.courseTitle}</td>
-                <td className="px-4 py-3 text-[#0D47A1]">
-                  {new Date(entry.purchaseDate).toLocaleDateString()}
-                </td>
+                <td className="px-4 py-3 text-[#0D47A1]">{new Date(entry.purchaseDate).toLocaleDateString()}</td>
                 <td className="px-4 py-3 space-x-2">
                   <button onClick={() => handleView(entry)} className="text-[#1E88E5] hover:underline text-sm">View</button>
                   <button onClick={() => handleRemove(entry)} className="text-red-500 hover:underline text-sm">Remove</button>
@@ -176,7 +179,6 @@ const Dashboard = () => {
             ))}
           </tbody>
         </table>
-
         {filteredArray.length === 0 && (
           <p className="text-center text-[#90CAF9] py-6">No matching enrollments found.</p>
         )}
@@ -191,6 +193,7 @@ const Dashboard = () => {
               <img src={viewedStudent.student.imageUrl} alt={viewedStudent.student.name} className="w-16 h-16 rounded-full" />
               <div>
                 <p className="font-semibold text-blue-900">{viewedStudent.student.name}</p>
+                <p className="text-xs text-gray-600">{viewedStudent.student.email}</p>
                 <p className="text-[#1E88E5]">{viewedStudent.courseTitle}</p>
               </div>
             </div>

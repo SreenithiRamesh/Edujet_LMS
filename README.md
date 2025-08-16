@@ -269,5 +269,5 @@ EduJet-LMS/
 
 **Built with ❤️ by the SreenithiRamesh**
 
-**[Live Demo](https://memoryboostergame-frontend.onrender.com/)**
+**[Live Demo](https://www.linkedin.com/posts/sreenithi28_edtech-fullstack-mern-activity-7361709564095860737-1hjb?utm_source=share&utm_medium=member_desktop&rcm=ACoAAD631-4BnZk0deM95wYvg49d_yUkym5GV6g)**
 </div>
